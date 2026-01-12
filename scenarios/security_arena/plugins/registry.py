@@ -6,6 +6,8 @@ Maps scenario type names to plugin implementations and provides
 a factory function to load scenario plugins from configuration.
 """
 
+import importlib.util
+from pathlib import Path
 from typing import Any
 
 from .base import ScenarioPlugin
@@ -15,11 +17,54 @@ from .example_medical import MedicalRecordsPlugin
 
 
 # Registry mapping scenario names to plugin classes
-SCENARIO_PLUGINS: dict[str, type[ScenarioPlugin]] = {
+SCENARIO_PLUGINS: dict[str, type[ScenarioPlugin] | None] = {
     "portfolioiq": PortfolioIQPlugin,
     "thingularity": ThingularityPlugin,
     "medical_records": MedicalRecordsPlugin,  # Example custom scenario
+    "badblueprint": None,
 }
+
+
+def _load_badblueprint_plugin() -> type[ScenarioPlugin]:
+    plugin_path = (
+        Path(__file__).resolve().parents[1]
+        / "submissions"
+        / "purple_vanguard"
+        / "badblueprint"
+        / "plugin.py"
+    )
+    if not plugin_path.exists():
+        raise ValueError(
+            "Missing submission plugin at "
+            "scenarios/security_arena/submissions/purple_vanguard/badblueprint/plugin.py"
+        )
+
+    spec = importlib.util.spec_from_file_location(
+        "pv_badblueprint_plugin",
+        plugin_path,
+    )
+    if spec is None or spec.loader is None:
+        raise ValueError("Unable to load badblueprint submission plugin module.")
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    scenario_type = getattr(module, "SCENARIO_TYPE", None)
+    if scenario_type != "badblueprint":
+        raise ValueError(
+            "Submission plugin SCENARIO_TYPE must be 'badblueprint'."
+        )
+
+    plugin_class = getattr(module, "PLUGIN_CLASS", None)
+    if plugin_class is None:
+        raise ValueError("Submission plugin must define PLUGIN_CLASS.")
+
+    if not issubclass(plugin_class, ScenarioPlugin):
+        raise TypeError(
+            "Submission plugin PLUGIN_CLASS must inherit from ScenarioPlugin."
+        )
+
+    return plugin_class
 
 
 def load_scenario(scenario_type: str, config: dict[str, Any]) -> ScenarioPlugin:
@@ -46,14 +91,22 @@ def load_scenario(scenario_type: str, config: dict[str, Any]) -> ScenarioPlugin:
         >>> scenario = load_scenario("portfolioiq", config)
         >>> print(scenario.get_attack_objective())
     """
-    plugin_class = SCENARIO_PLUGINS.get(scenario_type)
+    # Local self-check: orchestrator should include "badblueprint" in available
+    # scenarios and load with scenario_type="badblueprint" without unknown errors.
+    if scenario_type == "badblueprint" and SCENARIO_PLUGINS["badblueprint"] is None:
+        SCENARIO_PLUGINS["badblueprint"] = _load_badblueprint_plugin()
 
-    if not plugin_class:
+    if scenario_type not in SCENARIO_PLUGINS:
         available = ", ".join(SCENARIO_PLUGINS.keys())
         raise ValueError(
             f"Unknown scenario type: '{scenario_type}'. "
             f"Available scenarios: {available}"
         )
+
+    plugin_class = SCENARIO_PLUGINS[scenario_type]
+
+    if not plugin_class:
+        raise ValueError(f"Scenario '{scenario_type}' did not load correctly.")
 
     return plugin_class(config)
 
