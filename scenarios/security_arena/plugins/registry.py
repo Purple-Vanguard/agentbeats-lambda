@@ -6,6 +6,8 @@ Maps scenario type names to plugin implementations and provides
 a factory function to load scenario plugins from configuration.
 """
 
+import importlib.util
+from pathlib import Path
 from typing import Any
 
 from .base import ScenarioPlugin
@@ -14,11 +16,49 @@ from .thingularity import ThingularityPlugin
 from .example_medical import MedicalRecordsPlugin
 
 
+def _load_badblueprint_plugin_class() -> type[ScenarioPlugin]:
+    plugin_path = (
+        Path(__file__).resolve().parents[1]
+        / "submissions"
+        / "purple_vanguard"
+        / "badblueprint"
+        / "plugin.py"
+    )
+    if not plugin_path.exists():
+        raise ValueError(
+            "Missing submission plugin at "
+            "scenarios/security_arena/submissions/purple_vanguard/badblueprint/plugin.py"
+        )
+
+    spec = importlib.util.spec_from_file_location(
+        "pv_badblueprint_plugin",
+        plugin_path,
+    )
+    if spec is None or spec.loader is None:
+        raise ValueError(f"Unable to load badblueprint plugin at {plugin_path}")
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    scenario_type = getattr(module, "SCENARIO_TYPE", None)
+    if scenario_type != "badblueprint":
+        raise ValueError(
+            "BadBlueprint submission must define SCENARIO_TYPE = 'badblueprint'"
+        )
+
+    plugin_class = getattr(module, "PLUGIN_CLASS", None)
+    if plugin_class is None:
+        raise ValueError("BadBlueprint submission must define PLUGIN_CLASS")
+
+    return plugin_class
+
+
 # Registry mapping scenario names to plugin classes
 SCENARIO_PLUGINS: dict[str, type[ScenarioPlugin]] = {
     "portfolioiq": PortfolioIQPlugin,
     "thingularity": ThingularityPlugin,
     "medical_records": MedicalRecordsPlugin,  # Example custom scenario
+    "badblueprint": _load_badblueprint_plugin_class(),
 }
 
 
