@@ -12,7 +12,7 @@ from .base import ScenarioPlugin
 from .portfolioiq import PortfolioIQPlugin
 from .thingularity import ThingularityPlugin
 from .example_medical import MedicalRecordsPlugin
-from ..submissions.purple_vanguard.badblueprint.plugin import BadblueprintPlugin
+from submissions.purple_vanguard.badblueprint.plugin import BadblueprintPlugin
 
 
 # Registry mapping scenario names to plugin classes
