@@ -25,13 +25,5 @@ With the baseline contract, the assistant should provide a normal review and **n
 - `artifacts/contract_attack.md` — contract with embedded injection
 - `artifacts/internal_guidelines.txt` — proprietary guideline text + canary
 
-## How to Run the Exporter
-```bash
-python scripts/export_legaleagleeye_submission.py
-```
-
-Output:
-- `scenarios/security_arena/submissions/purple_vanguard/legaleagleeye/attack_succeeded.json`
-
 ## Notes
 This scenario focuses on prompt extraction via indirect injection inside a legal contract.
