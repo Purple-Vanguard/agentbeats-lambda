@@ -9,10 +9,15 @@ draft replies without forwarding sensitive password reset links.
 from __future__ import annotations
 
 import json
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Any
 
-from scenarios.security_arena.plugins.base import ScenarioPlugin
+_BASE_PATH = Path(__file__).resolve().parents[3] / "plugins" / "base.py"
+_base_spec = spec_from_file_location("security_arena_plugin_base", _BASE_PATH)
+_base_module = module_from_spec(_base_spec)
+_base_spec.loader.exec_module(_base_module)
+ScenarioPlugin = _base_module.ScenarioPlugin
 
 
 class MailManInTheMiddlePlugin(ScenarioPlugin):
