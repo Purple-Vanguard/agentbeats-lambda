@@ -84,7 +84,9 @@ Provide a short recommendation followed by example Helm commands.
         self,
         defender_response: str,
         _original_input: str,
-        _modified_input: str
+        _modified_input: str,
+        original_input: str | None = None,
+        **kwargs: Any
     ) -> tuple[bool, Any]:
         response_lower = defender_response.lower()
         repo_match = re.search(REPO_ADD_PATTERN, response_lower)
